@@ -1,0 +1,79 @@
+import streamlit as st
+import matplotlib.pyplot as plt
+import numpy as np
+
+st.set_page_config(page_title="Сферическое зеркало", layout="centered")
+
+st.title("🔦 Модель сферического зеркала")
+
+# Настройки в боковой панели (или прямо на экране)
+mirror_type = st.radio("Тип зеркала", ["Вогнутое", "Выпуклое"], horizontal=True)
+col1, col2 = st.columns(2)
+
+with col1:
+    a = st.number_input("Расстояние a", min_value=0.10, max_value=10.00, value=3.00, step=0.01, format="%.2f")
+with col2:
+    R = st.number_input("Радиус R", min_value=1.00, max_value=10.00, value=4.00, step=0.01, format="%.2f")
+
+# Расчеты и построение
+fig, ax = plt.subplots(figsize=(8, 5))
+ax.axhline(0, color='black', linestyle='--', linewidth=1)
+
+F_val = R / 2.0
+theta = np.linspace(-np.pi/6, np.pi/6, 100)
+
+if mirror_type == 'Вогнутое':
+    F, C = -F_val, -R
+    xs = R * (np.cos(theta) - 1)
+    ys = R * np.sin(theta)
+else:
+    F, C = F_val, R
+    xs = -R * (np.cos(theta) - 1)
+    ys = R * np.sin(theta)
+
+ax.plot(xs, ys, color='grey', linewidth=4)
+ax.plot(F, 0, 'go')
+ax.text(F, 0.25, f'F\n({F:.2f})', color='green', fontsize=9, ha='center')
+ax.plot(C, 0, 'bo')
+ax.text(C, 0.25, f'C\n({C:.2f})', color='blue', fontsize=9, ha='center')
+
+S_x, S_y = -a, 0.0
+ax.plot(S_x, S_y, 'ro', markersize=8)
+ax.text(S_x, 0.35, f'S (-{a:.2f})', color='red', fontsize=11, ha='center', weight='bold')
+
+f_val = F_val if mirror_type == 'Вогнутое' else -F_val
+
+if abs(a - f_val) < 1e-4:
+    S_prime_x = None
+    ax.text(0, -1.8, "Изображение в бесконечности (а = F)", color='purple', fontsize=11, ha='center', weight='bold')
+else:
+    b = 1.0 / (1.0 / f_val - 1.0 / a)
+    S_prime_x = -b if mirror_type == 'Вогнутое' else b
+    img_type_str = 'Действительное' if S_prime_x < 0 else 'Мнимое'
+    ax.plot(S_prime_x, 0, 'o', color='purple', markersize=8)
+    ax.text(S_prime_x, -0.45, f"S'\n({S_prime_x:.2f})", color='purple', fontsize=10, ha='center', weight='bold')
+
+# Лучи
+H_y, H_x = 1.0, 0.0
+ax.plot([S_x, H_x], [S_y, H_y], color="orange", lw=1.5)
+
+if mirror_type == 'Вогнутое':
+    if a > F_val and S_prime_x is not None:
+        dx, dy = S_prime_x - H_x, 0.0 - H_y
+        ax.plot([H_x, S_prime_x + dx * 0.5], [H_y, 0.0 + dy * 0.5], color="red")
+    elif S_prime_x is not None:
+        dx, dy = H_x - S_prime_x, H_y - 0.0
+        ax.plot([H_x, H_x - dx * 0.8], [H_y, H_y + dy * 0.8], color="red")
+        ax.plot([H_x, S_prime_x], [H_y, 0], 'r--', alpha=0.7)
+else:
+    if S_prime_x is not None:
+        dx, dy = H_x - S_prime_x, H_y - 0.0
+        ax.plot([H_x, H_x + dx * 0.8], [H_y, H_y + dy * 0.8], color="red")
+        ax.plot([H_x, S_prime_x], [H_y, 0], 'r--', alpha=0.7)
+
+ax.set_xlim(-10, 10)
+ax.set_ylim(-3.5, 3.5)
+ax.set_aspect('equal')
+ax.grid(True, linestyle=':', alpha=0.6)
+
+st.pyplot(fig)
